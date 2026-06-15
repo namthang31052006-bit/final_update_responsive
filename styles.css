@@ -1,0 +1,177 @@
+document.documentElement.classList.add("js");
+
+const body = document.body;
+const siteHeader = document.querySelector("#siteHeader");
+const menuToggle = document.querySelector("#menuToggle");
+const navLinks = document.querySelector("#navLinks");
+const themeToggle = document.querySelector("#themeToggle");
+const navAnchors = [...document.querySelectorAll(".nav-links a")];
+
+const savedTheme = localStorage.getItem("portfolio-theme");
+const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+
+function applyTheme(theme) {
+  const isDark = theme === "dark";
+  body.classList.toggle("dark", isDark);
+  themeToggle.setAttribute("aria-label", `Switch to ${isDark ? "light" : "dark"} mode`);
+}
+
+applyTheme(savedTheme || (prefersDark ? "dark" : "light"));
+
+themeToggle.addEventListener("click", () => {
+  const nextTheme = body.classList.contains("dark") ? "light" : "dark";
+  applyTheme(nextTheme);
+  localStorage.setItem("portfolio-theme", nextTheme);
+});
+
+function closeMenu() {
+  navLinks.classList.remove("show");
+  menuToggle.classList.remove("active");
+  menuToggle.setAttribute("aria-expanded", "false");
+  menuToggle.setAttribute("aria-label", "Open navigation menu");
+  body.classList.remove("menu-open");
+}
+
+menuToggle.addEventListener("click", () => {
+  const isOpen = navLinks.classList.toggle("show");
+  menuToggle.classList.toggle("active", isOpen);
+  menuToggle.setAttribute("aria-expanded", String(isOpen));
+  menuToggle.setAttribute("aria-label", `${isOpen ? "Close" : "Open"} navigation menu`);
+  body.classList.toggle("menu-open", isOpen);
+});
+
+navAnchors.forEach((anchor) => anchor.addEventListener("click", closeMenu));
+
+document.addEventListener("click", (event) => {
+  if (!navLinks.contains(event.target) && !menuToggle.contains(event.target)) {
+    closeMenu();
+  }
+});
+
+function updateHeader() {
+  siteHeader.classList.toggle("scrolled", window.scrollY > 16);
+}
+
+updateHeader();
+window.addEventListener("scroll", updateHeader, { passive: true });
+
+const sections = [...document.querySelectorAll("main section[id]")];
+const sectionObserver = new IntersectionObserver((entries) => {
+  entries.forEach((entry) => {
+    if (entry.isIntersecting) {
+      navAnchors.forEach((anchor) => {
+        anchor.classList.toggle("active", anchor.getAttribute("href") === `#${entry.target.id}`);
+      });
+    }
+  });
+}, { rootMargin: "-35% 0px -55%", threshold: 0 });
+
+sections.forEach((section) => sectionObserver.observe(section));
+
+const revealObserver = new IntersectionObserver((entries, observer) => {
+  entries.forEach((entry) => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add("visible");
+      observer.unobserve(entry.target);
+    }
+  });
+}, { threshold: 0.12 });
+
+document.querySelectorAll(".reveal").forEach((element) => revealObserver.observe(element));
+
+const galleryItems = document.querySelectorAll(".gallery-item");
+const lightbox = document.querySelector("#lightbox");
+const lightboxImage = document.querySelector("#lightboxImage");
+const lightboxTitle = document.querySelector("#lightboxTitle");
+const closeLightboxButton = document.querySelector("#closeLightbox");
+let lastFocusedElement;
+
+function openLightbox(item) {
+  lastFocusedElement = document.activeElement;
+  const imageClass = [...item.classList].find((className) => className !== "gallery-item");
+  lightboxImage.className = `lightbox-image ${imageClass}`;
+  lightboxTitle.textContent = item.dataset.title;
+  lightbox.classList.add("show");
+  lightbox.setAttribute("aria-hidden", "false");
+  body.classList.add("lightbox-open");
+  closeLightboxButton.focus();
+}
+
+function closeLightbox() {
+  if (!lightbox.classList.contains("show")) return;
+  lightbox.classList.remove("show");
+  lightbox.setAttribute("aria-hidden", "true");
+  body.classList.remove("lightbox-open");
+  lastFocusedElement?.focus();
+}
+
+galleryItems.forEach((item) => item.addEventListener("click", () => openLightbox(item)));
+closeLightboxButton.addEventListener("click", closeLightbox);
+
+lightbox.addEventListener("click", (event) => {
+  if (event.target === lightbox) closeLightbox();
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    closeMenu();
+    closeLightbox();
+  }
+});
+
+const testimonials = [
+  {
+    text: "\"Bach created a clean and responsive design. The website is easy to use and looks professional.\"",
+    name: "Linh Tran",
+    role: "UI/UX Designer"
+  },
+  {
+    text: "\"The portfolio has a strong visual rhythm and clear sections. It feels considered on both mobile and desktop.\"",
+    name: "Minh Pham",
+    role: "Web Design Student"
+  },
+  {
+    text: "\"The interactions add personality without getting in the way. Everything remains simple, focused, and easy to navigate.\"",
+    name: "Anna Le",
+    role: "Front-End Mentor"
+  }
+];
+
+let currentTestimonial = 0;
+const testimonialText = document.querySelector("#testimonialText");
+const testimonialName = document.querySelector("#testimonialName");
+const testimonialRole = document.querySelector("#testimonialRole");
+const testimonialCount = document.querySelector("#testimonialCount");
+
+function showTestimonial(index) {
+  const testimonial = testimonials[index];
+  testimonialText.animate(
+    [{ opacity: 0, transform: "translateY(8px)" }, { opacity: 1, transform: "translateY(0)" }],
+    { duration: 350, easing: "ease-out" }
+  );
+  testimonialText.textContent = testimonial.text;
+  testimonialName.textContent = testimonial.name;
+  testimonialRole.textContent = testimonial.role;
+  testimonialCount.textContent = `${String(index + 1).padStart(2, "0")} / ${String(testimonials.length).padStart(2, "0")}`;
+}
+
+document.querySelector("#prevTestimonial").addEventListener("click", () => {
+  currentTestimonial = (currentTestimonial - 1 + testimonials.length) % testimonials.length;
+  showTestimonial(currentTestimonial);
+});
+
+document.querySelector("#nextTestimonial").addEventListener("click", () => {
+  currentTestimonial = (currentTestimonial + 1) % testimonials.length;
+  showTestimonial(currentTestimonial);
+});
+
+const contactForm = document.querySelector("#contactForm");
+const formStatus = document.querySelector("#formStatus");
+
+contactForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  formStatus.textContent = "Thanks! This demo form is ready to connect to your preferred email service.";
+  contactForm.reset();
+});
+
+document.querySelector("#currentYear").textContent = new Date().getFullYear();
